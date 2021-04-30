@@ -27,7 +27,7 @@
 **Timeline**
 * Monday 5/3: Finish project components for Q-learning algorithm
 * Friday 5/7: Finish project components for robot perception
-Monday 5/10: Finish project components for robot manipulation & movement
+* Monday 5/10: Finish project components for robot manipulation & movement
 * Tuesday 5/11: Complete writeup, Partner Contributions Survey, record gif and rosbag
 * Wednesday 5/12: Project Due 11am CT
 
