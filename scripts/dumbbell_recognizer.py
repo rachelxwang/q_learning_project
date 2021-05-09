@@ -7,7 +7,7 @@ import moveit_commander
 
 class DumbbellRecognizer(object):
 
-    def __init__(self, color):
+    def __init__(self):
 
         self.initialized = False
 
@@ -33,7 +33,7 @@ class DumbbellRecognizer(object):
         self.move_group_arm.go([0.0,0.0,0.0,0.0], wait=True)
 
         # the color of the dumbbell the turtlebot wants to identify and approach
-        self.color_goal = color
+        self.color_goal = None
 
         # variable to determine whether the robot should be moving
         # used to keep the robot motionless while moving the arm
@@ -43,12 +43,6 @@ class DumbbellRecognizer(object):
         self.DEBUGGING = False
 
         self.initialized = True
-
-
-    # this may or may not be useful
-    def change_color(self, color):
-
-        self.color_goal = color
 
 
     # helper method to get the color mask
@@ -110,13 +104,12 @@ class DumbbellRecognizer(object):
         if data.ranges[0] >= 0.25 and not self.stop:
             # Go forward if not close enough to dumbell.
             self.twist.linear.x = 0.1
+            self.cmd_vel_pub.publish(self.twist)
         else:
             # Close enough to dumbbell, stop.
-            self.stop = True
             self.twist.linear.x = 0
-
-        # Publish msg to cmd_vel.
-        self.cmd_vel_pub.publish(self.twist)
+            self.cmd_vel_pub.publish(self.twist)
+            self.stop = True
 
 
     # method to extend arm so that the robot can simply drive towards the
@@ -150,9 +143,13 @@ class DumbbellRecognizer(object):
         self.move_group_arm.stop() # prevent any residual movement
 
 
-    def run(self):
+    def run(self, color):
+        
         # sleep to ensure initilization happens before moving the arm
         rospy.sleep(1)
+
+        # set the goal to the given color
+        self.color_goal = color
 
         # extend arm to the position for grabbing dumbbell
         self.extend_arm()
@@ -164,9 +161,13 @@ class DumbbellRecognizer(object):
         # lift the arm to pick up the dumbbell
         self.lift_arm()
 
+        self.twist.angular.z = 0
+        self.twist.linear.x = 0
+        self.cmd_vel_pub.publish(self.twist)
+
 
 # this is for running the node manually for debugging and testing
 # TODO: deleted later once controller is implemented
 if __name__ == '__main__':
-    node = DumbbellRecognizer('red')
-    node.run()
+    node = DumbbellRecognizer()
+    node.run('red')
