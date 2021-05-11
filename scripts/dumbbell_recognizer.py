@@ -30,14 +30,14 @@ class DumbbellRecognizer(object):
         # set up interface to openmanipulator
         self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
         self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
-        self.move_group_arm.go([0.0,0.0,0.0,0.0], wait=True)
 
         # the color of the dumbbell the turtlebot wants to identify and approach
         self.color_goal = None
 
-        # variable to determine whether the robot should be moving
-        # used to keep the robot motionless while moving the arm
+        # variables for control flow
         self.stop = True
+        self.color_detected = False
+        self.done = False
 
         # set to True for extra information while debugging
         self.DEBUGGING = False
@@ -49,7 +49,7 @@ class DumbbellRecognizer(object):
     def get_mask(self, hsv):
 
         if (self.color_goal == 'green'):
-            return cv2.inRange(hsv, (40, 40, 40), (70, 255, 255))
+            return cv2.inRange(hsv, (50, 40, 40), (70, 255, 255))
 
         if (self.color_goal == 'blue'):
             return cv2.inRange(hsv, (100, 150, 0), (140, 255, 255))
@@ -71,11 +71,16 @@ class DumbbellRecognizer(object):
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
         mask = self.get_mask(hsv)
-
-        # using moments() function, determine the center of the colored pixels
         M = cv2.moments(mask)
 
         if M['m00'] > 0:
+
+            if not self.color_detected:
+                self.twist.angular.z = 0
+                self.cmd_vel_pub.publish(self.twist)
+                self.color_detected = True
+                self.extend_arm()
+
             # determine the center of the colored pixels in the image
             cx = int(M['m10']/M['m00'])
             cy = int(M['m01']/M['m00'])
@@ -94,6 +99,12 @@ class DumbbellRecognizer(object):
                 cv2.imshow('window', image)
                 cv2.waitKey(0)
 
+        else:
+
+            if not self.color_detected:
+                self.twist.angular.z = 0.2
+                self.cmd_vel_pub.publish(self.twist)
+
 
     # method for linear movement towards the dumbell and stopping 0.25m from it
     def process_scan(self, data):
@@ -101,15 +112,17 @@ class DumbbellRecognizer(object):
         if (not self.initialized):
             return
 
-        if data.ranges[0] >= 0.25 and not self.stop:
-            # Go forward if not close enough to dumbell.
-            self.twist.linear.x = 0.1
-            self.cmd_vel_pub.publish(self.twist)
+        if data.ranges[0] >= 0.24:
+            if not self.stop:
+                # Go forward if not close enough to dumbell.
+                self.twist.linear.x = 0.1
+                self.cmd_vel_pub.publish(self.twist)
         else:
             # Close enough to dumbbell, stop.
             self.twist.linear.x = 0
             self.cmd_vel_pub.publish(self.twist)
             self.stop = True
+            self.done = True
 
 
     # method to extend arm so that the robot can simply drive towards the
@@ -144,23 +157,26 @@ class DumbbellRecognizer(object):
 
 
     def run(self, color):
-        
+
         # sleep to ensure initilization happens before moving the arm
         rospy.sleep(1)
 
         # set the goal to the given color
         self.color_goal = color
 
-        # extend arm to the position for grabbing dumbbell
-        self.extend_arm()
+        # reset control flow
+        self.stop = True
+        self.color_detected = False
+        self.done = False
 
         # run until robot has finished identifying and moving to dumbbell
-        while not self.stop:
+        while not self.done:
             rospy.sleep(1)
 
         # lift the arm to pick up the dumbbell
         self.lift_arm()
 
+        # ensure no residual movement
         self.twist.angular.z = 0
         self.twist.linear.x = 0
         self.cmd_vel_pub.publish(self.twist)
@@ -170,4 +186,4 @@ class DumbbellRecognizer(object):
 # TODO: deleted later once controller is implemented
 if __name__ == '__main__':
     node = DumbbellRecognizer()
-    node.run('red')
+    node.run('blue')

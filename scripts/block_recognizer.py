@@ -3,7 +3,8 @@
 import rospy, cv2, cv_bridge, numpy, math
 from sensor_msgs.msg import Image, LaserScan
 from geometry_msgs.msg import Twist
-import keras_ocr
+import keras_ocr, moveit_commander
+import dumbbell_recognizer
 
 class BlockRecognizer(object):
 
@@ -26,6 +27,10 @@ class BlockRecognizer(object):
 
         # set up ROS / cv bridge
         self.bridge = cv_bridge.CvBridge()
+
+        # set up interface to openmanipulator
+        self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
+        self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
 
         # keeps position of each block
         self.blocks = { "1": None, "2": None, "3": None }
@@ -97,6 +102,7 @@ class BlockRecognizer(object):
                 # image_callback
                 self.ready_for_image_rec = False
 
+
     # method to put the robot in position for image recognition
     def process_scan(self, data):
 
@@ -107,7 +113,7 @@ class BlockRecognizer(object):
         # LiDAR scan so that all three numbers can be seen by RBG camera at once
         if not self.ready_for_image_rec and self.in_range:
             if (data.ranges[0] == float("inf")) or (data.ranges[30] == float("inf")) or (data.ranges[330] == float("inf")):
-                self.twist.angular.z = 0.15
+                self.twist.angular.z = 0.2
             else:
                 self.ready_for_image_rec = True
                 self.twist.angular.z = 0.0
@@ -127,14 +133,14 @@ class BlockRecognizer(object):
         # if the goal is the left block, rotate to face left block, then
         # drive forwards
         if self.blocks[self.goal] == "left":
-            self.twist.angular.z = math.radians(15.5)
+            self.twist.angular.z = math.radians(20)
             self.cmd_vel_pub.publish(self.twist)
             rospy.sleep(2)
             self.twist.angular.z = 0
             self.cmd_vel_pub.publish(self.twist)
             self.twist.linear.x = 0.2
             self.cmd_vel_pub.publish(self.twist)
-            rospy.sleep(13)
+            rospy.sleep(14)
             self.twist.linear.x = 0
             self.cmd_vel_pub.publish(self.twist)
 
@@ -160,8 +166,26 @@ class BlockRecognizer(object):
             self.twist.linear.x = 0
             self.cmd_vel_pub.publish(self.twist)
 
-        # TODO implement dropping dumbbell and turn around to face remaining dumbbells
-        print("drop dumbbell")
+        self.drop_dumbbell()
+
+
+    def drop_dumbbell(self):
+
+        self.twist.linear.x = -0.1
+        self.cmd_vel_pub.publish(self.twist)
+
+        # Move the arm
+        arm_joint_goal = [0.0, math.radians(45.0), math.radians(-30.0), math.radians(-5.0)]
+        self.move_group_arm.go(arm_joint_goal, wait=True)
+        self.move_group_arm.stop() # prevent any residual movement
+
+        rospy.sleep(2)
+
+        self.twist.linear.x = 0
+        self.cmd_vel_pub.publish(self.twist)
+
+        self.move_group_arm.go([0.0,0.0,0.0,0.0], wait=True)
+
         self.done = True
 
 
@@ -170,7 +194,7 @@ class BlockRecognizer(object):
     # it after picking up the dumbbell
     def move_blocks_into_range(self):
 
-        self.twist.linear.x = -0.1
+        self.twist.linear.x = -0.11
         self.cmd_vel_pub.publish(self.twist)
 
         rospy.sleep(1)
@@ -188,8 +212,11 @@ class BlockRecognizer(object):
         rospy.sleep(1)
 
         # reset control flow and set block goal
-        self.done = False
         self.goal = number
+        self.in_range = False
+        self.ready_for_image_rec = False
+        self.done_processing_scan = False
+        self.done = False
 
         self.move_blocks_into_range()
 
