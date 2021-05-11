@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
-import rospy, cv2, cv_bridge, numpy
+import rospy, cv2, cv_bridge, numpy, math
 from sensor_msgs.msg import Image, LaserScan
 from geometry_msgs.msg import Twist
+import moveit_commander
 
 class DumbbellRecognizer(object):
 
-    def __init__(self, color):
+    def __init__(self):
 
         self.initialized = False
 
@@ -26,11 +27,17 @@ class DumbbellRecognizer(object):
         # set up ROS / cv bridge
         self.bridge = cv_bridge.CvBridge()
 
-        # the color of the dumbbell the turtlebot wants to identify and approach
-        self.color_goal = color
+        # set up interface to openmanipulator
+        self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
+        self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
+        self.move_group_arm.go([0.0,0.0,0.0,0.0], wait=True)
 
-        # a variable to know when it has gotten close enough to the dumbbell
-        self.stop = False
+        # the color of the dumbbell the turtlebot wants to identify and approach
+        self.color_goal = None
+
+        # variable to determine whether the robot should be moving
+        # used to keep the robot motionless while moving the arm
+        self.stop = True
 
         # set to True for extra information while debugging
         self.DEBUGGING = False
@@ -38,11 +45,7 @@ class DumbbellRecognizer(object):
         self.initialized = True
 
 
-    def change_color(self, color):
-
-        self.color_goal = color
-
-
+    # helper method to get the color mask
     def get_mask(self, hsv):
 
         if (self.color_goal == 'green'):
@@ -57,6 +60,7 @@ class DumbbellRecognizer(object):
             return cv2.bitwise_or(mask1, mask2)
 
 
+    # method for identifying dumbbells and angular movement
     def image_callback(self, data):
 
         if (not self.initialized):
@@ -77,7 +81,7 @@ class DumbbellRecognizer(object):
             cy = int(M['m01']/M['m00'])
 
             err = (image.shape[1] / 2) - cx
-            k_p = 0.005
+            k_p = 0.0018
 
             if not self.stop:
                 self.twist.angular.z = k_p * err
@@ -91,28 +95,79 @@ class DumbbellRecognizer(object):
                 cv2.waitKey(0)
 
 
+    # method for linear movement towards the dumbell and stopping 0.25m from it
     def process_scan(self, data):
 
         if (not self.initialized):
             return
 
-        if data.ranges[0] >= 0.35 and not self.stop:
-            # Go forward if not close enough to wall.
+        if data.ranges[0] >= 0.25 and not self.stop:
+            # Go forward if not close enough to dumbell.
             self.twist.linear.x = 0.1
+            self.cmd_vel_pub.publish(self.twist)
         else:
-            # Close enough to wall, stop.
-            self.stop = True
+            # Close enough to dumbbell, stop.
             self.twist.linear.x = 0
+            self.cmd_vel_pub.publish(self.twist)
+            self.stop = True
 
-        # Publish msg to cmd_vel.
+
+    # method to extend arm so that the robot can simply drive towards the
+    # dumbbell to position the dumbbell in between the grabber
+    def extend_arm(self):
+
+        if (not self.initialized):
+            return
+
+        # Move the arm
+        arm_joint_goal = [0.0, math.radians(45.0), math.radians(-30.0), math.radians(-5.0)]
+        self.move_group_arm.go(arm_joint_goal, wait=True)
+        self.move_group_arm.stop() # prevent any residual movement
+
+        # Move the gripper
+        gripper_joint_goal = [0.01,0.01]
+        self.move_group_gripper.go(gripper_joint_goal, wait=True)
+        self.move_group_gripper.stop() # prevent any residual movement
+
+        self.stop = False
+
+
+    # method to lift arm once the dumbbell is in position between the grabber
+    def lift_arm(self):
+
+        if (not self.initialized):
+            return
+
+        arm_joint_goal = [0.0, math.radians(0.0), math.radians(-10.0), math.radians(-35.0)]
+        self.move_group_arm.go(arm_joint_goal, wait=True)
+        self.move_group_arm.stop() # prevent any residual movement
+
+
+    def run(self, color):
+        
+        # sleep to ensure initilization happens before moving the arm
+        rospy.sleep(1)
+
+        # set the goal to the given color
+        self.color_goal = color
+
+        # extend arm to the position for grabbing dumbbell
+        self.extend_arm()
+
+        # run until robot has finished identifying and moving to dumbbell
+        while not self.stop:
+            rospy.sleep(1)
+
+        # lift the arm to pick up the dumbbell
+        self.lift_arm()
+
+        self.twist.angular.z = 0
+        self.twist.linear.x = 0
         self.cmd_vel_pub.publish(self.twist)
 
 
-    def run(self):
-        # run for 10 seconds to give robot time to identify and move to dumbbell
-        rospy.sleep(10)
-
-
+# this is for running the node manually for debugging and testing
+# TODO: deleted later once controller is implemented
 if __name__ == '__main__':
-    node = DumbbellRecognizer('green')
-    node.run()
+    node = DumbbellRecognizer()
+    node.run('red')
