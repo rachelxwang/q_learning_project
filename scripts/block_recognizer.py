@@ -12,7 +12,7 @@ class BlockRecognizer(object):
 
         self.initialized = False
 
-        rospy.init_node('number_recognizer')
+        #rospy.init_node('number_recognizer')
 
         # subscribe to the robot's RGB camera data stream
         self.image_sub = rospy.Subscriber('camera/rgb/image_raw',
@@ -148,21 +148,21 @@ class BlockRecognizer(object):
         if self.blocks[self.goal] == "middle":
             self.twist.linear.x = 0.2
             self.cmd_vel_pub.publish(self.twist)
-            rospy.sleep(10)
+            rospy.sleep(11)
             self.twist.linear.x = 0
             self.cmd_vel_pub.publish(self.twist)
 
         # if the goal is the right block, rotate to face right block, then
         # drive forwards
         if self.blocks[self.goal] == "right":
-            self.twist.angular.z = math.radians(-15.5)
+            self.twist.angular.z = math.radians(-20)
             self.cmd_vel_pub.publish(self.twist)
             rospy.sleep(2)
             self.twist.angular.z = 0
             self.cmd_vel_pub.publish(self.twist)
             self.twist.linear.x = 0.2
             self.cmd_vel_pub.publish(self.twist)
-            rospy.sleep(13)
+            rospy.sleep(14)
             self.twist.linear.x = 0
             self.cmd_vel_pub.publish(self.twist)
 
@@ -215,6 +215,7 @@ class BlockRecognizer(object):
         self.goal = number
         self.in_range = False
         self.ready_for_image_rec = False
+        self.done_with_image_rec = False
         self.done_processing_scan = False
         self.done = False
 

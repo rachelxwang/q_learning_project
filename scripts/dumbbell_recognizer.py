@@ -11,7 +11,7 @@ class DumbbellRecognizer(object):
 
         self.initialized = False
 
-        rospy.init_node('dumbbell_recognizer')
+        #rospy.init_node('dumbbell_recognizer')
 
         # subscribe to the robot's RGB camera data stream
         self.image_sub = rospy.Subscriber('camera/rgb/image_raw',
