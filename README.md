@@ -50,31 +50,19 @@ TBD
 
 ### Robot Perception Description
 
-  * **Identifying the locations and identities of each of the colored dumbbells**
+  * **Identifying the locations and identities of each of the colored dumbbells:** Located within `image_callback()` within the `DumbbellRecognizer` class. We used the strategies from the in class line follower exercise to distinguish the colored dumbbells (cv2 mask, etc). If the robot does not immediately detect any dumbbell of the specified color, it will rotate in place until it does. We used [this](https://stackoverflow.com/questions/51229126/how-to-find-the-red-color-regions-using-opencv) Stack Overflow question to help set the HSV thresholds for each color.
 
-  Located within `image_callback()` within the `DumbbellRecognizer` class. We used the strategies from the in class line follower exercise to distinguish the colored dumbbells (cv2 mask, etc). If the robot does not immediately detect any dumbbell of the specified color, it will rotate in place until it does. We used [this](https://stackoverflow.com/questions/51229126/how-to-find-the-red-color-regions-using-opencv) Stack Overflow question to help set the HSV thresholds for each color.
-
-  * **Identifying the locations and identities of each of the numbered blocks**
-
-  Located primarily within `image_callback()` within the `BlockRecognizer` class. We used keras_ocr library as recommended by the project writeup. The robot will first put itself into a location and orientation so that it can "see" all three blocks at once (in `move_blocks_into_range()` and parts of `process_scan()`). Then it will do keras_ocr image processing once, and since it can see all three blocks at once, it records which numbered block is in which position.
+  * **Identifying the locations and identities of each of the numbered blocks:** Located primarily within `image_callback()` within the `BlockRecognizer` class. We used keras_ocr library as recommended by the project writeup. The robot will first put itself into a location and orientation so that it can "see" all three blocks at once (in `move_blocks_into_range()` and parts of `process_scan()`). Then it will do keras_ocr image processing once, and since it can see all three blocks at once, it records which numbered block is in which position.
 
 ### Robot Manipulation and Movement
 
-  * **Moving to the right spot in order to pick up a dumbbell**
+  * **Moving to the right spot in order to pick up a dumbbell:** Located within `image_callback()` and `process_scan()` within the `DumbbellRecognizer` class. We used strategies from the in class line follower and stop at wall exercises to move to the right spot to pick up a dumbbell. The angular movement is determined by using PID control to move the center of the colored pixels to the center of the RGB camera image in `image_callback()`. The linear movement is essentially the same as the stop at wall exercise in `process_scan()`.
 
-  Located within `image_callback()` and `process_scan()` within the `DumbbellRecognizer` class. We used strategies from the in class line follower and stop at wall exercises to move to the right spot to pick up a dumbbell. The angular movement is determined by using PID control to move the center of the colored pixels to the center of the RGB camera image in `image_callback()`. The linear movement is essentially the same as the stop at wall exercise in `process_scan()`.
+  * **Picking up the dumbbell:** Located within `extend_arm()` and `lift_arm()` within the `DumbbellRecognizer` class. After identifying the dumbbell but before approaching it, the robot will extend its arm and open the gripper so that the gripper is at a height to grab the middle part of the dumbbell. Then after driving forward and positioning the middle part of the dumbbell within the open gripper, the robot will lift its arm so that the gripper catches onto the larger top part of the dumbbell and picks up the dumbbell.
 
-  * **Picking up the dumbbell**
+  * **Moving to the desired destination (numbered block) with the dumbbell:** Located within `drive_to_block()` within the `BlockRecognizer` class. Since the robot knows the positions of all three blocks from the image processing, it can determine whether it needs to go to the left, middle, or right block. If it needs to go to the left or right block, then it will rotate approximately 40 degrees counterclockwise or clockwise respectively and then drive forwards about 2.8m to be roughly in front of the block. If it needs to go to the middle block, then it will simply drive forwards about 2.2m to be in front of the block. Since all three dumbbells are in roughly the same place relative to the blocks, it does not matter which dumbbell the robot has just picked up. Note: Pouya said not to "hard code" block locations on Slack, but Sarah said during our meeting with her that this strategy of knowing the distance the robot needs to drive is ok.
 
-  Located within `extend_arm()` and `lift_arm()` within the `DumbbellRecognizer` class. After identifying the dumbbell but before approaching it, the robot will extend its arm and open the gripper so that the gripper is at a height to grab the middle part of the dumbbell. Then after driving forward and positioning the middle part of the dumbbell within the open gripper, the robot will lift its arm so that the gripper catches onto the larger top part of the dumbbell and picks up the dumbbell.
-
-  * **Moving to the desired destination (numbered block) with the dumbbell**
-
-  Located within `drive_to_block()` within the `BlockRecognizer` class. Since the robot knows the positions of all three blocks from the image processing, it can determine whether it needs to go to the left, middle, or right block. If it needs to go to the left or right block, then it will rotate approximately 40 degrees counterclockwise or clockwise respectively and then drive forwards about 2.8m to be roughly in front of the block. If it needs to go to the middle block, then it will simply drive forwards about 2.2m to be in front of the block. Since all three dumbbells are in roughly the same place relative to the blocks, it does not matter which dumbbell the robot has just picked up. Note: Pouya said not to "hard code" block locations on Slack, but Sarah said during our meeting with her that this strategy of knowing the distance the robot needs to drive is ok.
-
-  * **Putting the dumbbell back down at the desired destination**
-
-  Located within `drop_dumbbell()` within the `BlockRecognizer` class. The robot will simultaneously move backwards and return the arm to the extended position from before (picking up dumbbell). This will cause the robot to put the dumbbell down.
+  * **Putting the dumbbell back down at the desired destination:** Located within `drop_dumbbell()` within the `BlockRecognizer` class. The robot will simultaneously move backwards and return the arm to the extended position from before (picking up dumbbell). This will cause the robot to put the dumbbell down.
 
 ### Challenges
 
