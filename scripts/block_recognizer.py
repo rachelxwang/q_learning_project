@@ -12,8 +12,6 @@ class BlockRecognizer(object):
 
         self.initialized = False
 
-        #rospy.init_node('number_recognizer')
-
         # subscribe to the robot's RGB camera data stream
         self.image_sub = rospy.Subscriber('camera/rgb/image_raw',
                 Image, self.image_callback)
@@ -171,19 +169,22 @@ class BlockRecognizer(object):
 
     def drop_dumbbell(self):
 
+        # drop dumbbell while backing up so as to not knock the dumbbell over
         self.twist.linear.x = -0.1
         self.cmd_vel_pub.publish(self.twist)
 
-        # Move the arm
+        # move the arm
         arm_joint_goal = [0.0, math.radians(45.0), math.radians(-30.0), math.radians(-5.0)]
         self.move_group_arm.go(arm_joint_goal, wait=True)
         self.move_group_arm.stop() # prevent any residual movement
 
+        # continue backing up so as to not pick the dumbbell back up
         rospy.sleep(2)
 
         self.twist.linear.x = 0
         self.cmd_vel_pub.publish(self.twist)
 
+        # reset arm so the red dot from arm doesn't disturb dumbbell recognition
         self.move_group_arm.go([0.0,0.0,0.0,0.0], wait=True)
 
         self.done = True
@@ -205,7 +206,8 @@ class BlockRecognizer(object):
         self.in_range = True
 
 
-    # number argument is a string, e.g. to go to block 2, number should be "2"
+    # number argument is a string, e.g. to go to block 2, call run("2")
+    # call this method to make robot detect and drive to a block
     def run(self, number):
 
         # ensure initilization
@@ -224,7 +226,7 @@ class BlockRecognizer(object):
         while not self.done:
             rospy.sleep(1)
 
-
+# this is for running the node manually for debugging and testing
 if __name__ == '__main__':
     node = BlockRecognizer()
     node.run("3")

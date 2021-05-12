@@ -11,8 +11,6 @@ class DumbbellRecognizer(object):
 
         self.initialized = False
 
-        #rospy.init_node('dumbbell_recognizer')
-
         # subscribe to the robot's RGB camera data stream
         self.image_sub = rospy.Subscriber('camera/rgb/image_raw',
                 Image, self.image_callback)
@@ -75,6 +73,7 @@ class DumbbellRecognizer(object):
 
         if M['m00'] > 0:
 
+            # since M['m00'] > 0, color has been detected so stop spinning
             if not self.color_detected:
                 self.twist.angular.z = 0
                 self.cmd_vel_pub.publish(self.twist)
@@ -85,6 +84,7 @@ class DumbbellRecognizer(object):
             cx = int(M['m10']/M['m00'])
             cy = int(M['m01']/M['m00'])
 
+            # PID to drive to dumbbell
             err = (image.shape[1] / 2) - cx
             k_p = 0.0018
 
@@ -101,6 +101,7 @@ class DumbbellRecognizer(object):
 
         else:
 
+            # if colored dumbbell not detected, spin until it is detected
             if not self.color_detected:
                 self.twist.angular.z = 0.2
                 self.cmd_vel_pub.publish(self.twist)
@@ -142,6 +143,7 @@ class DumbbellRecognizer(object):
         self.move_group_gripper.go(gripper_joint_goal, wait=True)
         self.move_group_gripper.stop() # prevent any residual movement
 
+        # now that arm is in place, the robot needs to move forwards
         self.stop = False
 
 
@@ -156,6 +158,7 @@ class DumbbellRecognizer(object):
         self.move_group_arm.stop() # prevent any residual movement
 
 
+    # call this method, e.g. run("green"), to command robot to pick up dumbbell
     def run(self, color):
 
         # sleep to ensure initilization happens before moving the arm
@@ -183,7 +186,6 @@ class DumbbellRecognizer(object):
 
 
 # this is for running the node manually for debugging and testing
-# TODO: deleted later once controller is implemented
 if __name__ == '__main__':
     node = DumbbellRecognizer()
     node.run('blue')
