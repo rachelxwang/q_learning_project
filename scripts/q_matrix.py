@@ -3,7 +3,7 @@
 import rospy
 import numpy as np
 import random
-from q_learning_project.msg import QLearningReward, QMatrix, RobotMoveDBToBlock
+from q_learning_project.msg import QLearningReward, QMatrix, QMatrixRow, RobotMoveDBToBlock
 
 class QMatrix_init(object):
     def __init__(self):
@@ -25,17 +25,22 @@ class QMatrix_init(object):
         # create subscriber
         rospy.Subscriber('/q_learning/reward', QLearningReward, self.handle_reward)
 
+    def init_matrices(self, actions, states, action_matrix):
+        self.actions = actions
+        self.states = states
+        self.action_matrix = action_matrix
+
     # method to select and publish an action for convergence
-    def converge(self, actions, states, action_matrix):
+    def converge(self):
         possible_actions = {}
         index = []
         action = []
 
         # identify possible actions from current state
-        for i in range(len(action_matrix[self.cur_state])):
-            if action_matrix[self.cur_state][i] != -1:
+        for i in range(len(self.action_matrix[self.cur_state])):
+            if self.action_matrix[self.cur_state][i] != -1:
                 index.append(i)
-                action.append(action_matrix[self.cur_state][i])
+                action.append(self.action_matrix[self.cur_state][i])
 
         for i in range(len(index)):
             possible_actions[index[i]] = action[i]
@@ -43,6 +48,7 @@ class QMatrix_init(object):
         # if no possible actions return to 0- this might need to be changed
         if len(possible_actions) == 0:
             self.cur_state = 0
+            self.converge()
             return
 
         # choose random action
@@ -50,8 +56,8 @@ class QMatrix_init(object):
 
         # create action and publish
         action = RobotMoveDBToBlock()
-        action.robot_db = actions[chosen_action[1].astype(np.int64)]["dumbbell"]
-        action.block_id = actions[chosen_action[1].astype(np.int64)]["block"]
+        action.robot_db = self.actions[chosen_action[1].astype(np.int64)]["dumbbell"]
+        action.block_id = self.actions[chosen_action[1].astype(np.int64)]["block"]
 
         self.action_pub.publish(action)
 
@@ -62,13 +68,17 @@ class QMatrix_init(object):
 
     # method that updates the q_matrix dependent on reward received
     def handle_reward(self, data):
-        print("reward")
+        print(data)
         q_msg = QMatrix()
         q_rows = []
         sum = 0
+        new_val = 0
 
         # calculate new value for q_matrix
-        new_val = data.reward + 0.8 * max(self.q_matrix[self.cur_state])
+        if (max(self.q_matrix[self.cur_state])) != -1:
+            new_val = int(data.reward + 0.8 * max(self.q_matrix[self.cur_state]))
+        else:
+            new_val = int(data.reward)
 
         # test whether the new value updates the q_matrix
         # this is used to test for convergence
@@ -81,19 +91,26 @@ class QMatrix_init(object):
             for row in self.convergence_matrix:
                 for item in row:
                     if item == 0:
-                        continue
+                        pass
                     else:
                         sum += 1
-        print(sum)
+
+        # print(self.q_matrix)
         if (sum == 576):
             self.is_converged = True
+            return
         else:
             self.is_converged = False
 
+        
+
         # create q_matrix message to publish
         for i in range(len(self.q_matrix)):
-            q_rows.append(self.q_matrix[i])
+            q_rows.append(QMatrixRow())
+            q_rows[i].q_matrix_row = self.q_matrix[i].astype(int).tolist()
 
         q_msg.q_matrix = q_rows
 
         self.q_matrix_pub.publish(q_msg)
+
+        self.converge()

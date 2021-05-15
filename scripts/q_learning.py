@@ -53,7 +53,7 @@ class QLearning(object):
     def save_q_matrix(self):
         # TODO: You'll want to save your q_matrix to a file once it is done to
         # avoid retraining
-        with open('q_matrix.csv', mode='w') as q_file:
+        with open(os.path.dirname(__file__) + '/../output/q_matrix.csv', mode='w') as q_file:
             q_writer = csv.writer(q_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             for row in self.q_matrix:
                 q_writer.writerow(row)
@@ -64,15 +64,25 @@ class QLearning(object):
         # initialize the q_matrix and convergence_matrix with invalid options
         for i in range(len(q_matrix_node.q_matrix)):
             for j in range(len(q_matrix_node.q_matrix[0])):
-                if self.action_matrix[i][j] == -1:
-                    q_matrix_node.q_matrix[i][j] = -1
-                    q_matrix_node.convergence_matrix[i][j] = -1
+                q_matrix_node.q_matrix[i][j] = -1
+                q_matrix_node.convergence_matrix[i][j] = -1
+
+        for i in range(len(q_matrix_node.q_matrix)):
+            for j in range(len(q_matrix_node.q_matrix)):
+                if self.action_matrix[i][j] != -1:
+                    q_matrix_node.q_matrix[i][(self.action_matrix[i][j]).astype(np.int64)] = 0
+                    q_matrix_node.convergence_matrix[i][(self.action_matrix[i][j]).astype(np.int64)] = 0
+
+        print(q_matrix_node.q_matrix)
 
         time.sleep(1)
 
         # go until q_matrix is converged and then write it to a file
+        q_matrix_node.init_matrices(self.actions, self.states, self.action_matrix)
+        q_matrix_node.converge()
+
         while not q_matrix_node.is_converged:
-            q_matrix_node.converge(self.actions, self.states, self.action_matrix)
+            rospy.sleep(1)
         
         self.q_matrix = q_matrix_node.q_matrix
         

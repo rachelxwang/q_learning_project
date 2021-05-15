@@ -17,7 +17,10 @@ class Controller(object):
 
         self.cur_state = 0
 
-        # self.q_matrix = np.genfromtxt(os.path.dirname(__file__) + '/../q_matrix.csv', delimiter=',')
+        self.q_matrix = np.genfromtxt(os.path.dirname(__file__) + '/../output/q_matrix.csv', delimiter=',')
+        print(self.q_matrix)
+        print(self.q_matrix[0])
+        print(self.q_matrix[3])
         
         self.action_matrix = np.loadtxt(path_prefix + "action_matrix.txt")
 
@@ -32,21 +35,16 @@ class Controller(object):
         self.states = list(map(lambda x: list(map(lambda y: int(y), x)), self.states))
 
     def perform_action(self):
-        action = self.q_matrix[self.cur_state].index(max(self.q_matrix[self.cur_state]))
+        action = np.where(self.q_matrix[self.cur_state] == (max(self.q_matrix[self.cur_state])))
 
-        self.dumbbell_recognizer.run(self.actions[action]["dumbbell"])
-        self.block_recognizer.run(self.actions[action]["block"])
+        self.dumbbell_recognizer.run(self.actions[action[0][0]]["dumbbell"])
+        self.block_recognizer.run(str(self.actions[action[0][0]]["block"]))
 
-        self.cur_state = self.action_matrix[self.cur_state].index(action)
+        self.cur_state = np.where(self.action_matrix[self.cur_state] == action[0][0])[0][0]
 
     def run(self):
-        # if (max(self.q_matrix[self.cur_state]) == -1):
-        #     return
-        # else:
-        #     self.perform_action()
-
-        self.dumbbell_recognizer.run("blue")
-        self.block_recognizer.run("3")
+        for i in range(3):
+            self.perform_action()
 
 
 if __name__ == "__main__":

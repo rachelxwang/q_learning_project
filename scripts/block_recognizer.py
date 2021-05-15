@@ -95,6 +95,7 @@ class BlockRecognizer(object):
                 # done with image recognition, we now know where each block is
                 self.done_with_image_rec = True
             else:
+                print("try again")
                 # try again, causes robot to rotate until finding three blocks
                 # again in process_scan and then retry image recognition in
                 # image_callback
@@ -179,7 +180,7 @@ class BlockRecognizer(object):
         self.move_group_arm.stop() # prevent any residual movement
 
         # continue backing up so as to not pick the dumbbell back up
-        rospy.sleep(2)
+        rospy.sleep(10)
 
         self.twist.linear.x = 0
         self.cmd_vel_pub.publish(self.twist)
