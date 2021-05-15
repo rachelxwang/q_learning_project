@@ -34,19 +34,25 @@
 
 ## Writeup
 
-gif TBD
+![Moving the Dumbbells](./output/action_recording.gif)
 
 ### Objectives Description
 
-TBD
+The goal of this project was to use reinforcement learning so as to teach a robot the goal destinations for various dumbbells, in the form of blocks. Effectively, each dumbbell had an ideal destination block, and the goal was to allow the robot to learn, through trial and error, which dumbbell should go to which block.
 
 ### High-level Description
 
-TBD
+We used reinforcement learning in this project by implementing a system which received rewards based on whether or not the robot placed the dumbbells in the correct positions, with a positive reward if it suceeded, and no reward otherwise. In effect we gave the robot the ability to select/perform actions that would move the dumbbells, and then it received rewards dependent on its success. This allowed the robot to "learn" what actions gave it rewards, as well as, through q-learning, which actions would give it the most potential to receive future rewards.
 
 ### Q-Learning Algorithm Description
 
-TBD
+  * **Selecting and executing actions for the robot (or phantom robot) to take:** Located with the `converge()` function within the `QMatrix_init` class. This code first identified actions that it was possible to take given the current state our robot was in using the action matrix. We then used `np.random.choice()` to choose a random action from this list which we then published to the action publisher based on the dumbbell and block values found in the action matrix.
+
+  * **Updating the Q-matrix:** Located within the `handle_reward()` function within the `QMatrix_init` class. First we checked if there were any possible next states that our current state could proceed to. If there was a valid state a possible new Q value was calculated using the formula discussed in class, with an alpha of 1 and a gamma of 0.8 such that it equaled `data.reward + 0.8 * max(self.q_matrix[self.cur_state])`. In the other case that there were no valid actions the `data.reward` was used, as there is no possible future value to add.
+  
+  * **Determining when to stop iterating through the Q-learning algorithm:** Testing for convergence also took place within the `handle_reward()` function in `QMatrix_init`. This involved checking if the q value we calculated was different from its previous value. If it was, we would modify our q matrix and set a counter in a separate convergence matrix to 0 to indicate that this value is still being updated. However, if the q value is not new, we set the value in the convergence matrix to 1 to indicate that this value is, at least as of now, not updating. We then check the values in the convergence matrix, if any of them are 0, the matrix is not converged and we continue. However if they are not equal to 0 a tracker is incremented that counts the number of nonzero entries. If every entry is nonzero the matrix has converged as this represents a circumstance where there has been a run and no value in the q_matrix has updated.
+  
+  * **Executing the path most likely to lead to receiving a reward after the Q-matrix has converged on the simulated Turtlebot3 robot:** This is located in the `run()` and `perform_action()` functions in the `Controller` class. In `run()` we simply call `perform_action()` three times, representing the actions carrying each dumbbell. In `perform_action()` we find the action to perform by getting the indices of entries in the Q-Matrix for the current state that have the highest value. These indices represent the action associated with that value for the current state. We then use the first of these actions to get the dumbbell and block associated from the `actions` matrix, which are then used to perform functions to move the dumbbells to the blocks which is discussed later.
 
 ### Robot Perception Description
 
@@ -70,10 +76,10 @@ One challenge we faced was that there was a lot of noise in the environment (e.g
 
 ### Future Work
 
-TBD
+We had hoped to be able to do more work to improve the ability of the robot when placing the dumbbells in front of the blocks. While it does currently place the dumbbells in front of the blocks, it is not the most accurate, and will frequently place them off center and a bit farther from the block then we would have wanted. To improve this we would use the ideas of PID discussed in class combined with LaserScan data to get the dumbbell consistently in a position central relative to the block. We also would have liked to improve the speed of the system, as some of the actions taken by the robot were very time consuming and could probably be improved. This includes the spinning the robot does when trying to see the blocks or the dumbbells, which has two main angles that could be improved. One was that this spinning was usually a generic form of spinning, which meant that it would spin a long way around to find something that could have been found much quicker spinning the opposite way. The other being that potentially something like laser scan could be used to identify potential destinations to spin to so as to improve the accuracy of spinning and potentially increase the speed of the robot.
 
 ### Takeaways
 
   * One takeaway was realizing the differences between ROS nodes and OOP classes. Initially I thought that the two were roughly equivalent, but later realized that nodes could not access functions of other nodes like classes typically can. Sarah had said that our only options were to either combine all perception and movement into one node, i.e. one class, or to create custom ROS messages to communicate between nodes. We found a workaround that was not either of these solutions. We found that one ROS node can access the methods of another class that is not a ROS node. For example, the `DumbbellRecognizer` class cannot be run on its own as it is not a ROS node but needs to publish msgs, but the `Controller` class can create an instance of `DumbbellRecognizer` and since `Controller` is a ROS node, then it can run the `DumbbellRecognizer` methods (which include publishing to `/cmd_vel` for example). This allowed us to separate code into smaller logical pieces and avoid having huge classes with many functions. This allows for easier testing of specific parts and for better readability.
 
-  * Another takeaway TBD
+  * The importance of writing self contained modules that can perform their actions on there own, both for the sake of testing, as well as for ease of use between partners. A great example of this in this project are the `DumbbellRecognizer` and the `BlockRecognizer` which are writtent as entirely self contained such that the only function needed to use them is their `run()` functions. This was useful for testing as their independence allowed them to be tested before the completion of the `Controller` ensuring that they could move to dumbbells/blocks and pick/drop off the dumbbells. Then, when used in the `Controller` the integration was very simple, as it was simple the creation of instances of these classes and the calling of their `run()`. This implementation of independent code that stands/runs on its own for unit testing/testing before a controller is implemented was very helpful for debugging and when combining the various elements of this project.
