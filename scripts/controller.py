@@ -18,9 +18,6 @@ class Controller(object):
         self.cur_state = 0
 
         self.q_matrix = np.genfromtxt(os.path.dirname(__file__) + '/../output/q_matrix.csv', delimiter=',')
-        print(self.q_matrix)
-        print(self.q_matrix[0])
-        print(self.q_matrix[3])
         
         self.action_matrix = np.loadtxt(path_prefix + "action_matrix.txt")
 

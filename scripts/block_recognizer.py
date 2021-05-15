@@ -139,7 +139,7 @@ class BlockRecognizer(object):
             self.cmd_vel_pub.publish(self.twist)
             self.twist.linear.x = 0.2
             self.cmd_vel_pub.publish(self.twist)
-            rospy.sleep(14)
+            rospy.sleep(16)
             self.twist.linear.x = 0
             self.cmd_vel_pub.publish(self.twist)
 
@@ -161,7 +161,7 @@ class BlockRecognizer(object):
             self.cmd_vel_pub.publish(self.twist)
             self.twist.linear.x = 0.2
             self.cmd_vel_pub.publish(self.twist)
-            rospy.sleep(14)
+            rospy.sleep(16)
             self.twist.linear.x = 0
             self.cmd_vel_pub.publish(self.twist)
 
@@ -180,7 +180,7 @@ class BlockRecognizer(object):
         self.move_group_arm.stop() # prevent any residual movement
 
         # continue backing up so as to not pick the dumbbell back up
-        rospy.sleep(10)
+        rospy.sleep(14)
 
         self.twist.linear.x = 0
         self.cmd_vel_pub.publish(self.twist)
@@ -199,7 +199,7 @@ class BlockRecognizer(object):
         self.twist.linear.x = -0.11
         self.cmd_vel_pub.publish(self.twist)
 
-        rospy.sleep(1)
+        rospy.sleep(2)
 
         self.twist.linear.x = 0
         self.cmd_vel_pub.publish(self.twist)

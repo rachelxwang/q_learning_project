@@ -68,7 +68,6 @@ class QMatrix_init(object):
 
     # method that updates the q_matrix dependent on reward received
     def handle_reward(self, data):
-        print(data)
         q_msg = QMatrix()
         q_rows = []
         sum = 0
